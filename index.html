@@ -379,22 +379,22 @@
     </div>
   </div>
 
+  <!-- Top Helmet Telemetry Banner (Separated cleanly below the Top Health Bar, always active in Iron Man mode) -->
+  <div id="ironman-telemetry-banner" class="fixed top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 sm:gap-6 mono text-[11px] text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] whitespace-nowrap pointer-events-none select-none transition-opacity duration-300">
+    <div class="flex items-center gap-1.5 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40">
+      <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+      <span class="font-bold tracking-wider">MARK 85 AVIONICS</span>
+    </div>
+    <div id="ironman-hud-mach" class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40 font-extrabold text-amber-300">
+      AIRSPEED: 0 KM/H
+    </div>
+    <div id="ironman-hud-alt-layer" class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40 font-bold text-sky-200">
+      ALT: 0 M • AIRFIELD
+    </div>
+  </div>
+
   <!-- Iron Man Holographic Visor & HUD Display (JARVIS / FRIDAY Flight Avionics) -->
   <div id="ironman-visor-hud" class="fixed inset-0 pointer-events-none z-10 transition-opacity duration-300 hidden select-none overflow-hidden">
-    <!-- Top Helmet Telemetry Banner (Separated cleanly below the Top Health Bar) -->
-    <div class="absolute top-14 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-6 mono text-[11px] text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] whitespace-nowrap">
-      <div class="flex items-center gap-1.5 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40">
-        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-        <span class="font-bold tracking-wider">MARK 85 AVIONICS</span>
-      </div>
-      <div id="ironman-hud-mach" class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40 font-extrabold text-amber-300">
-        AIRSPEED: 0 KM/H
-      </div>
-      <div id="ironman-hud-alt-layer" class="bg-slate-950/80 px-3 py-1.5 rounded-xl border border-cyan-500/40 font-bold text-sky-200">
-        ALT: 0 M • AIRFIELD
-      </div>
-    </div>
-
     <!-- Left & Right Curved Visor Arcs & Artificial Horizon Ladder -->
     <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 600">
       <defs>
@@ -11960,12 +11960,16 @@
       if (btnFree) btnFree.className = m === 'freecam' ? activeCls : idleCls;
 
       const visorHud = document.getElementById('ironman-visor-hud');
+      const telemBanner = document.getElementById('ironman-telemetry-banner');
+      const hpBanner = document.getElementById('player-top-hp-banner');
       const attackBtns = document.getElementById('ironman-attack-buttons');
       const missileBtn = document.getElementById('btn-fire-missile');
 
       if (m === 'walk') {
         if (attackBtns) attackBtns.classList.remove('hidden');
         if (missileBtn) missileBtn.classList.add('hidden');
+        if (telemBanner) telemBanner.classList.remove('hidden');
+        if (hpBanner) hpBanner.classList.remove('hidden');
         if (visorHud) {
           if (simState.camView === 'firstperson') {
             visorHud.classList.remove('hidden');
@@ -11977,6 +11981,7 @@
         if (attackBtns) attackBtns.classList.add('hidden');
         if (missileBtn && m === 'car') missileBtn.classList.remove('hidden');
         if (visorHud) visorHud.classList.add('hidden');
+        if (telemBanner) telemBanner.classList.add('hidden');
       }
 
       if (btnCamTop) {
@@ -15655,20 +15660,26 @@
         walkPhysics.speed = THREE.MathUtils.lerp(walkPhysics.speed, targetForwardSpeed, Math.min(1.0, dt * fwdRate));
         if (Math.abs(walkPhysics.speed) < 0.05 && walkThrottle === 0) walkPhysics.speed = 0;
 
-        // Sonic boom detection
-        const curMach = walkPhysics.speed / 340.0;
-        if (walkPhysics.lastMach < 1.0 && curMach >= 1.0) {
-          playSonicBoomSound();
-          carPhysics.shakeIntensity = 0.85;
-        }
-        walkPhysics.lastMach = curMach;
-
         // 3D Direction Vector
         const cosPitch = Math.cos(walkPhysics.pitch);
         const sinPitch = Math.sin(walkPhysics.pitch);
         const fwdX = Math.cos(walkPhysics.yaw) * cosPitch;
         const fwdY = sinPitch;
         const fwdZ = -Math.sin(walkPhysics.yaw) * cosPitch;
+
+        // True 3D Airspeed & Mach calculation (incorporates forward speed and vertical climb/dive rate)
+        const curVx = fwdX * walkPhysics.speed;
+        const curVy = fwdY * walkPhysics.speed + (walkPhysics.velY || 0);
+        const curVz = fwdZ * walkPhysics.speed;
+        const trueAirspeedMps = Math.hypot(curVx, curVy, curVz);
+        const curMach = trueAirspeedMps / 340.0;
+
+        // Sonic boom detection
+        if (walkPhysics.lastMach < 1.0 && curMach >= 1.0) {
+          playSonicBoomSound();
+          carPhysics.shakeIntensity = 0.85;
+        }
+        walkPhysics.lastMach = curMach;
 
         // Soft ground cushion (smooth repulsion prevents hard bouncing or clipping into ground)
         const floorY = GROUND_SURFACE_Y + 0.65;
@@ -15879,38 +15890,58 @@
 
         // --- TELEMETRY & HUD DISPLAY ---
         const machStr = curMach.toFixed(2);
-        const speedKmh = Math.round(walkPhysics.speed * 3.6);
+        const speedKmh = Math.round(trueAirspeedMps * 3.6);
         const cmp = yawToCompass(walkPhysics.yaw);
 
-        let atmoLayer = 'TROPOSPHERE (RCTP)';
-        if (alt > 100000) atmoLayer = 'EXOSPHERE • DEEP COSMIC SPACE';
-        else if (alt > 50000) atmoLayer = 'THERMOSPHERE / KARMAN LINE';
-        else if (alt > 15000) atmoLayer = 'MESOSPHERE (SUBCAPILLARY)';
-        else if (alt > 1500) atmoLayer = 'STRATOSPHERE (OZONE LAYER)';
+        const altMeters = Math.max(0, Math.round(walkPhysics.pos.y - GROUND_SURFACE_Y));
 
-        const visorMachEl = document.getElementById('iron-hud-mach');
-        const visorAltEl = document.getElementById('iron-hud-alt');
-        const visorAtmoEl = document.getElementById('iron-hud-atmo');
-        const visorSpeedEl = document.getElementById('iron-hud-speed');
-        if (visorMachEl) visorMachEl.textContent = `MACH ${machStr}`;
-        if (visorAltEl) visorAltEl.textContent = alt > 9999 ? `${(alt / 1000).toFixed(1)} km` : `${Math.round(alt)} m MSL`;
-        if (visorAtmoEl) visorAtmoEl.textContent = atmoLayer;
-        if (visorSpeedEl) visorSpeedEl.textContent = `${speedKmh} km/h`;
+        let atmoLayer = 'AIRFIELD';
+        if (altMeters > 100000) atmoLayer = 'EXOSPHERE • DEEP SPACE';
+        else if (altMeters > 50000) atmoLayer = 'THERMOSPHERE';
+        else if (altMeters > 15000) atmoLayer = 'MESOSPHERE';
+        else if (altMeters > 1500) atmoLayer = 'STRATOSPHERE';
+        else if (altMeters > 20) atmoLayer = 'TROPOSPHERE (RCTP)';
+        else atmoLayer = 'AIRFIELD';
 
-        const zone = alt > 1500 ? atmoLayer : getAirportZoneName(walkPhysics.pos.x, walkPhysics.pos.z, walkPhysics.pos.y);
-        document.getElementById('sim-hud-loc').textContent = `${zone} • Mach ${machStr}`;
-        document.getElementById('sim-gauge-1-label').textContent = 'AIRSPEED';
-        document.getElementById('sim-gauge-1').textContent = curMach >= 1.0 ? `M${machStr}` : String(speedKmh);
-        document.getElementById('sim-gauge-1-unit').textContent = curMach >= 1.0 ? 'MACH' : 'km/h';
-        document.getElementById('sim-gauge-2-label').textContent = 'ARC POWER';
-        document.getElementById('sim-gauge-2').textContent = '100%';
-        document.getElementById('sim-gauge-2-unit').textContent = 'FUSION';
-        document.getElementById('sim-gauge-3-label').textContent = 'ALTITUDE';
-        document.getElementById('sim-gauge-3').textContent = alt > 9999 ? (alt / 1000).toFixed(1) : alt.toFixed(1);
-        document.getElementById('sim-gauge-3-unit').textContent = alt > 9999 ? 'km MSL' : 'm MSL';
-        document.getElementById('sim-gauge-4-label').textContent = 'HEADING';
-        document.getElementById('sim-gauge-4').textContent = `${cmp.deg}°`;
-        document.getElementById('sim-gauge-4-unit').textContent = cmp.cardinal;
+        const altStr = altMeters > 9999 ? `${(altMeters / 1000).toFixed(1)} KM` : `${altMeters} M`;
+
+        // Update Top Helmet Telemetry Banner (MARK 85 AVIONICS)
+        const visorSpeedEl = document.getElementById('ironman-hud-mach');
+        const visorAltEl = document.getElementById('ironman-hud-alt-layer');
+        if (visorSpeedEl) {
+          visorSpeedEl.textContent = curMach >= 1.0 ? `AIRSPEED: M${machStr} (${speedKmh} KM/H)` : `AIRSPEED: ${speedKmh} KM/H`;
+        }
+        if (visorAltEl) {
+          visorAltEl.textContent = `ALT: ${altStr} • ${atmoLayer}`;
+        }
+
+        const zone = altMeters > 1500 ? atmoLayer : getAirportZoneName(walkPhysics.pos.x, walkPhysics.pos.z, walkPhysics.pos.y);
+        const simHudLocEl = document.getElementById('sim-hud-loc');
+        if (simHudLocEl) simHudLocEl.textContent = `${zone} • Mach ${machStr}`;
+        const g1Label = document.getElementById('sim-gauge-1-label');
+        if (g1Label) g1Label.textContent = 'AIRSPEED';
+        const g1 = document.getElementById('sim-gauge-1');
+        if (g1) g1.textContent = curMach >= 1.0 ? `M${machStr}` : String(speedKmh);
+        const g1Unit = document.getElementById('sim-gauge-1-unit');
+        if (g1Unit) g1Unit.textContent = curMach >= 1.0 ? 'MACH' : 'km/h';
+        const g2Label = document.getElementById('sim-gauge-2-label');
+        if (g2Label) g2Label.textContent = 'ARC POWER';
+        const g2 = document.getElementById('sim-gauge-2');
+        if (g2) g2.textContent = '100%';
+        const g2Unit = document.getElementById('sim-gauge-2-unit');
+        if (g2Unit) g2Unit.textContent = 'FUSION';
+        const g3Label = document.getElementById('sim-gauge-3-label');
+        if (g3Label) g3Label.textContent = 'ALTITUDE';
+        const g3 = document.getElementById('sim-gauge-3');
+        if (g3) g3.textContent = altMeters > 9999 ? (altMeters / 1000).toFixed(1) : String(altMeters);
+        const g3Unit = document.getElementById('sim-gauge-3-unit');
+        if (g3Unit) g3Unit.textContent = altMeters > 9999 ? 'km MSL' : 'm MSL';
+        const g4Label = document.getElementById('sim-gauge-4-label');
+        if (g4Label) g4Label.textContent = 'HEADING';
+        const g4 = document.getElementById('sim-gauge-4');
+        if (g4) g4.textContent = `${cmp.deg}°`;
+        const g4Unit = document.getElementById('sim-gauge-4-unit');
+        if (g4Unit) g4Unit.textContent = cmp.cardinal;
 
         // Proximity checks for Car and Heli
         const dCar = walkPhysics.pos.distanceTo(carPhysics.pos);
