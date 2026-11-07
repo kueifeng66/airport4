@@ -5011,7 +5011,6 @@
       const now = new Date();
       const hour = now.getHours() + now.getMinutes() / 60;
       // Daytime: 06:00 to 18:00 (6 AM to 6 PM), Night outside those hours
-      // return (hour >= 6.0 && hour < 18.0) ? 'day' : 'night';
       return (hour >= 6.0 && hour < 18.0) ? 'day' : 'day';
     }
 
@@ -9394,6 +9393,84 @@
       });
     }
 
+    // Visceral Bone-Cracking & Demonic Gaping Jaw Bite Crunch Audio Synthesis
+    function playBossBiteChompSound(dist = 15) {
+      if (!sfxEnabled) return;
+      initAudioContext();
+      if (!simAudioCtx) return;
+      const now = simAudioCtx.currentTime;
+      const vol = THREE.MathUtils.clamp((90.0 - dist) / 90.0, 0.1, 0.95);
+
+      // 1. Visceral Bone/Armor Crunch (Noise transient burst)
+      const bufferSize = Math.floor(simAudioCtx.sampleRate * 0.22);
+      const buffer = simAudioCtx.createBuffer(1, bufferSize, simAudioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (simAudioCtx.sampleRate * 0.035));
+      }
+      const noise = simAudioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseFilter = simAudioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(1400, now);
+      noiseFilter.frequency.exponentialRampToValueAtTime(280, now + 0.16);
+      noiseFilter.Q.setValueAtTime(2.2, now);
+      const noiseGain = simAudioCtx.createGain();
+      noiseGain.gain.setValueAtTime(vol * 0.9, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(simAudioCtx.destination);
+      noise.start(now);
+
+      // 2. Heavy Visceral Demonic Jaw Snap / Flesh Crunch (Sub Pitch Drop)
+      const osc = simAudioCtx.createOscillator();
+      const oscFilter = simAudioCtx.createBiquadFilter();
+      const oscGain = simAudioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+      oscFilter.type = 'lowpass';
+      oscFilter.frequency.setValueAtTime(650, now);
+      oscFilter.frequency.exponentialRampToValueAtTime(110, now + 0.2);
+      oscGain.gain.setValueAtTime(vol * 0.85, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(oscFilter);
+      oscFilter.connect(oscGain);
+      oscGain.connect(simAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    }
+
+    // High Aggressive Screech & Sonic Surge as Boss Leaps toward Iron Man
+    function playBossLeapScreamSound(dist = 30) {
+      if (!sfxEnabled) return;
+      initAudioContext();
+      if (!simAudioCtx) return;
+      const now = simAudioCtx.currentTime;
+      const vol = THREE.MathUtils.clamp((130.0 - dist) / 130.0, 0.08, 0.75);
+
+      const osc = simAudioCtx.createOscillator();
+      const filter = simAudioCtx.createBiquadFilter();
+      const gain = simAudioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.32);
+      osc.frequency.exponentialRampToValueAtTime(170, now + 0.68);
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(480, now);
+      filter.frequency.exponentialRampToValueAtTime(1100, now + 0.32);
+      filter.Q.setValueAtTime(2.2, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(vol * 0.7, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(simAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.75);
+    }
+
     // Create Procedural Pale Purple-Grey Vein & Blood-Splattered Mutant Boss Skin Texture (Matching Uploaded Reference Image)
     function createBossBruteSkinTexture() {
       const canvas = document.createElement('canvas');
@@ -9663,6 +9740,27 @@
     const sharedBossDebrisMatA = new THREE.MeshStandardMaterial({ color: 0x8e7c96, roughness: 0.85 });
     const sharedBossDebrisMatB = new THREE.MeshStandardMaterial({ color: 0x3b5978, roughness: 0.85 });
 
+    // Shared Materials & Geometries for Demon King Enormous Gaping Jaws & Fangs
+    // (Uses MeshBasicMaterial for mouth interior to guarantee ZERO WebGL light lag / ZERO shader recompilation freezes!)
+    const sharedBossToothMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0x553333,
+      roughness: 0.15,
+      metalness: 0.12
+    });
+    const sharedBossMouthCavityMat = new THREE.MeshBasicMaterial({
+      color: 0x99000a
+    });
+    const sharedBossTongueMat = new THREE.MeshBasicMaterial({
+      color: 0xdd1122
+    });
+    const sharedUpperToothGeo = new THREE.ConeGeometry(0.024, 0.09, 8);
+    sharedUpperToothGeo.rotateX(Math.PI);
+    const sharedUpperFangGeo = new THREE.ConeGeometry(0.034, 0.15, 8);
+    sharedUpperFangGeo.rotateX(Math.PI);
+    const sharedLowerToothGeo = new THREE.ConeGeometry(0.025, 0.10, 8);
+    const sharedLowerTuskGeo = new THREE.ConeGeometry(0.040, 0.18, 8);
+
     // Build Colossal 3D Hulking Mutant Zombie Brute Mesh (Matching Attached Reference Image & Video 18:18)
     function createColossalBossMesh(bossName) {
       const root = new THREE.Group();
@@ -9748,41 +9846,101 @@
 
       const head = new THREE.Group();
       head.position.set(0, 0.08, 0.04);
+      head.scale.setScalar(1.45); // Massive 45% larger head & gaping jaws!
       neck.add(head);
 
       // Bald Brow-Heavy Skull
-      const craniumGeo = new THREE.SphereGeometry(0.165, 16, 14);
-      craniumGeo.scale(1.02, 1.12, 1.08);
+      const craniumGeo = new THREE.SphereGeometry(0.18, 16, 14);
+      craniumGeo.scale(1.05, 1.15, 1.10);
       const cranium = new THREE.Mesh(craniumGeo, skinMat);
-      cranium.position.set(0, 0.08, 0);
+      cranium.position.set(0, 0.09, 0);
       cranium.castShadow = true;
       head.add(cranium);
 
-      // Heavy Supraorbital Brow Ridge
-      const browMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.06, 0.12), skinMat);
-      browMesh.position.set(0, 0.13, 0.12);
+      // Heavy Supraorbital Brow Ridge with Demonic Bone Horn Nodules
+      const browMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.07, 0.13), skinMat);
+      browMesh.position.set(0, 0.14, 0.13);
       head.add(browMesh);
 
       // Roaring Face Plate
-      const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.06), faceMat);
-      facePlate.position.set(0, 0.05, 0.135);
+      const facePlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.07), faceMat);
+      facePlate.position.set(0, 0.06, 0.14);
       head.add(facePlate);
 
-      // Blank Glowing White Eyes
-      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), eyeGlowMat);
-      eyeL.position.set(-0.058, 0.095, 0.165);
-      const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), eyeGlowMat);
-      eyeR.position.set(0.058, 0.095, 0.165);
+      // Blazing Demon Eyes with Fiery Yellow Pupil Cores (Glows brightly from far away)
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), sharedBossEyeGlowMat);
+      eyeL.position.set(-0.062, 0.10, 0.175);
+      const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffff44 }));
+      pupilL.position.set(0, 0, 0.018);
+      eyeL.add(pupilL);
+
+      const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), sharedBossEyeGlowMat);
+      eyeR.position.set(0.062, 0.10, 0.175);
+      const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffff44 }));
+      pupilR.position.set(0, 0, 0.018);
+      eyeR.add(pupilR);
       head.add(eyeL, eyeR);
 
-      // Articulated Roaring Blood-Soaked Lower Jaw
+      // Cavernous Demonic Oral Cavity (Deep Glowing Throat)
+      const mouthCavity = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.15), sharedBossMouthCavityMat);
+      mouthCavity.position.set(0, 0.02, 0.09);
+      head.add(mouthCavity);
+
+      // Upper Maxilla & Deadly Razor Fangs Arch
+      const upperJawRoof = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.045, 0.12), bloodGoreMat);
+      upperJawRoof.position.set(0, 0.02, 0.14);
+      head.add(upperJawRoof);
+
+      for (let ti = -0.085; ti <= 0.086; ti += 0.028) {
+        const isFang = Math.abs(ti) > 0.055;
+        const toothGeo = isFang ? sharedUpperFangGeo : sharedUpperToothGeo;
+        const tooth = new THREE.Mesh(toothGeo, sharedBossToothMat);
+        tooth.position.set(ti, -0.018, 0.18 - Math.abs(ti) * 0.32);
+        tooth.rotation.z = ti * -0.35;
+        tooth.rotation.x = -0.15;
+        upperJawRoof.add(tooth);
+      }
+
+      // Enormous Articulated Roaring & Gaping Blood-Soaked Lower Jaw (Mandible)
+      // Pivot positioned back and low to permit extreme gaping jaw unhinging (up to 85 degrees!)
       const jaw = new THREE.Group();
-      jaw.position.set(0, -0.02, 0.08);
+      jaw.position.set(0, -0.03, 0.065);
       head.add(jaw);
 
-      const jawMesh = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.09, 0.14), bloodGoreMat);
-      jawMesh.position.set(0, -0.04, 0.04);
-      jaw.add(jawMesh);
+      const jawBase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.11, 0.22), bloodGoreMat);
+      jawBase.position.set(0, -0.055, 0.08);
+      jawBase.castShadow = true;
+      jaw.add(jawBase);
+
+      const chinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.10), skinMat);
+      chinMesh.position.set(0, -0.08, 0.16);
+      chinMesh.castShadow = true;
+      jaw.add(chinMesh);
+
+      // Mutated Fleshy Crimson Demonic Tongue
+      const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.16), sharedBossTongueMat);
+      tongue.position.set(0, -0.015, 0.08);
+      jaw.add(tongue);
+
+      // Stretchy bloody mouth-corner ligaments (gaping jaws web)
+      const cornerWebL = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.14, 0.06), bloodGoreMat);
+      cornerWebL.position.set(-0.115, 0.02, 0.08);
+      jaw.add(cornerWebL);
+      const cornerWebR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.14, 0.06), bloodGoreMat);
+      cornerWebR.position.set(0.115, 0.02, 0.08);
+      jaw.add(cornerWebR);
+
+      // Lower Dental Arch: Serrated Fangs & Giant Demonic Protruding Corner Tusks!
+      for (let ti = -0.09; ti <= 0.091; ti += 0.026) {
+        const isCornerTusk = Math.abs(ti) > 0.065;
+        const tuskGeo = isCornerTusk ? sharedLowerTuskGeo : sharedLowerToothGeo;
+        const tusk = new THREE.Mesh(tuskGeo, sharedBossToothMat);
+        tusk.position.set(ti, 0.018, 0.155 - Math.abs(ti) * 0.30);
+        tusk.rotation.z = ti * 0.45;
+        tusk.rotation.x = isCornerTusk ? 0.38 : 0.16;
+        tusk.castShadow = true;
+        jaw.add(tusk);
+      }
 
       // 4. Colossal Muscular Arms (Deltoids, Biceps, Monster Forearms & Giant Crushing Hands)
       function createBossArm(isRight) {
@@ -9941,6 +10099,10 @@
         neck,
         head,
         jaw,
+        mouthCavity,
+        tongue,
+        eyeL,
+        eyeR,
         leftArm: leftArmData.armRoot,
         rightArm: rightArmData.armRoot,
         leftForearm: leftArmData.forearm,
@@ -9997,7 +10159,7 @@
     function spawnColossalBoss(cfg) {
       const mesh = createColossalBossMesh(cfg.name);
       mesh.position.set(cfg.x, GROUND_SURFACE_Y, cfg.z);
-      const initYaw = Math.atan2(-(40 - cfg.z), -8 - cfg.x);
+      const initYaw = Math.atan2(-8 - cfg.x, 40 - cfg.z);
       mesh.rotation.y = initYaw;
       bossWorldGroup.add(mesh);
 
@@ -10020,7 +10182,10 @@
         roarTimer: 3.0 + Math.random() * 5.0,
         smashAnimTimer: 0,
         hitFlashTimer: 0,
-        isDead: false
+        isDead: false,
+        biteState: null,
+        biteTimer: 0,
+        hasDealtBiteDamage: false
       };
       bossList.push(bossObj);
       return bossObj;
@@ -11064,6 +11229,28 @@
       });
     }
 
+    // Visceral Demon King Gaping Jaw Bite Gore & Armor Impact Sparks FX
+    function spawnBiteGoreFx(x, y, z) {
+      for (let b = 0; b < 22; b++) {
+        const bMat = Math.random() > 0.25 ? sharedBloodCrimsonMat : sharedBloodBileMat;
+        const bMesh = new THREE.Mesh(sharedBloodDropGeo, bMat);
+        bMesh.position.set(x + (Math.random() - 0.5) * 0.9, y + (Math.random() - 0.5) * 0.9, z + (Math.random() - 0.5) * 0.9);
+        simWorldGroup.add(bMesh);
+
+        const spd = 5.0 + Math.random() * 11.0;
+        const ang = Math.random() * Math.PI * 2;
+        const elev = (Math.random() - 0.2) * Math.PI * 0.5;
+        zombieBloodParticles.push({
+          mesh: bMesh,
+          pos: bMesh.position,
+          vel: new THREE.Vector3(Math.cos(ang) * Math.cos(elev) * spd, Math.sin(elev) * spd + 3.0, Math.sin(ang) * Math.cos(elev) * spd),
+          life: 0.9 + Math.random() * 0.6
+        });
+      }
+      spawnCollisionSparks(x, y, z, 0, 1, 1.35);
+      spawnCollisionFlames(x, y, z, 0.85);
+    }
+
     function updateZombies(dt, elapsed) {
       // 1. Spawning Countdown: Spawn 10 more zombies every 60 seconds (1 minute)!
       zombieSpawnCountdown -= dt;
@@ -11101,106 +11288,243 @@
           if (dHoriz < 130) playBossRoarSound(dHoriz);
         }
 
-        // Boss Aggro vs Corner Sector Patrol:
-        // When Iron Man is within 145m (or this boss has been hit), charge and attack Iron Man!
-        // When Iron Man is far away (> 145m), patrol around its assigned airport corner/sector (homeX, homeZ)
-        // so all 25 bosses stay evenly distributed across all corners of the airport!
-        const isBossAggro = (dHoriz < 145.0 || b.consecutiveHits > 0);
-        if (isBossAggro && !ironManCombatState.isDead) {
-          b.targetHeading = Math.atan2(-dz, dx);
-          let bAngDiff = b.targetHeading - b.heading;
-          while (bAngDiff > Math.PI) bAngDiff -= Math.PI * 2;
-          while (bAngDiff < -Math.PI) bAngDiff += Math.PI * 2;
-          b.heading += bAngDiff * dt * 4.5;
-          b.mesh.rotation.y = b.heading;
+        // Boss Combat AI: Normal Movement vs Sudden Leap & Gaping Jaw Bite State Machine
+        if (!b.leapState) {
+          // Boss Aggro vs Corner Sector Patrol:
+          // When Iron Man is within 145m (or this boss has been hit), charge directly toward Iron Man!
+          const isBossAggro = (dHoriz < 145.0 || b.consecutiveHits > 0);
+          if (isBossAggro && !ironManCombatState.isDead) {
+            // Correct Facing Vector: Three.js mesh front (+Z) aligns with Math.atan2(dx, dz)
+            b.targetHeading = Math.atan2(dx, dz);
+            let bAngDiff = b.targetHeading - b.heading;
+            while (bAngDiff > Math.PI) bAngDiff -= Math.PI * 2;
+            while (bAngDiff < -Math.PI) bAngDiff += Math.PI * 2;
+            b.heading += bAngDiff * dt * 4.5;
+            b.mesh.rotation.y = b.heading;
 
-          const stopRadius = 5.5;
-          if (dHoriz > stopRadius) {
-            const chargeSpd = dHoriz < 65 ? 9.2 : 6.4;
-            b.speed = THREE.MathUtils.lerp(b.speed, chargeSpd, dt * 3.0);
-            b.pos.x += Math.cos(b.heading) * b.speed * dt;
-            b.pos.z -= Math.sin(b.heading) * b.speed * dt;
+            const stopRadius = 5.5;
+            if (dHoriz > stopRadius) {
+              const chargeSpd = dHoriz < 65 ? 9.2 : 6.4;
+              b.speed = THREE.MathUtils.lerp(b.speed, chargeSpd, dt * 3.0);
+              b.pos.x += Math.sin(b.heading) * b.speed * dt;
+              b.pos.z += Math.cos(b.heading) * b.speed * dt;
+            } else {
+              b.speed = THREE.MathUtils.lerp(b.speed, 0, dt * 5.0);
+            }
           } else {
-            b.speed = THREE.MathUtils.lerp(b.speed, 0, dt * 5.0);
+            // Patrol around assigned airport corner sector (homeX, homeZ)
+            b.patrolAngle = (b.patrolAngle || 0) + dt * 0.35;
+            const patrolTargetX = b.homeX + Math.cos(b.patrolAngle) * 18.0;
+            const patrolTargetZ = b.homeZ + Math.sin(b.patrolAngle) * 18.0;
+            const pdx = patrolTargetX - b.pos.x;
+            const pdz = patrolTargetZ - b.pos.z;
+            b.targetHeading = Math.atan2(pdx, pdz);
+            let bAngDiff = b.targetHeading - b.heading;
+            while (bAngDiff > Math.PI) bAngDiff -= Math.PI * 2;
+            while (bAngDiff < -Math.PI) bAngDiff += Math.PI * 2;
+            b.heading += bAngDiff * dt * 2.5;
+            b.mesh.rotation.y = b.heading;
+
+            b.speed = THREE.MathUtils.lerp(b.speed, 3.2, dt * 2.5);
+            b.pos.x += Math.sin(b.heading) * b.speed * dt;
+            b.pos.z += Math.cos(b.heading) * b.speed * dt;
+          }
+          b.pos.y = GROUND_SURFACE_Y;
+
+          // Boss Attack Logic against Iron Man:
+          // 1. Ground-Based Lunge & Bite Attack with Enormous Gaping Jaws! (ZERO Jumping!)
+          // 2. Heavy Missile / Concrete Boulder Projectile Attack
+          // 3. Close-Range Fist Smash / Ground-Slam
+          b.attackCooldown -= dt;
+          if (b.attackCooldown <= 0 && !ironManCombatState.isDead) {
+            if (d3D <= 16.5 || (dHoriz <= 15.0 && playerY <= 20.0)) {
+              if (Math.random() < 0.72) {
+                // Ground-Based Lunge & Demonic Gaping Jaw Bite! (Zero Jumping!)
+                b.biteState = 'windup';
+                b.biteTimer = 0.35;
+                b.speed = 0;
+                playBossRoarSound(dHoriz);
+                updateCollisionHUD(`⚠️ <strong class="text-purple-300 font-extrabold">${b.name}</strong> <span class="text-rose-400 font-black">LUNGES FORWARD WITH ENORMOUS GAPING JAWS!</span> 🩸`);
+              } else {
+                // Direct Colossal Ground-Slam Melee Attack!
+                b.attackCooldown = 1.65 + Math.random() * 0.6;
+                b.smashAnimTimer = 0.55;
+                playBossRoarSound(dHoriz);
+                spawnMassiveExplosion(b.pos.x + Math.sin(b.heading) * 3.5, GROUND_SURFACE_Y + 1.5, b.pos.z + Math.cos(b.heading) * 3.5, 1.15);
+                damageIronManPlayer(b.name, 1);
+              }
+            } else if (dHoriz <= 38.0 && playerY <= 25.0) {
+              // Mid-Range Ground Charge & Gaping Jaw Bite! (Zero Jumping!)
+              b.biteState = 'windup';
+              b.biteTimer = 0.38;
+              b.speed = 0;
+              playBossRoarSound(dHoriz);
+              updateCollisionHUD(`⚠️ <strong class="text-purple-300 font-extrabold">${b.name}</strong> <span class="text-rose-400 font-black">CHARGES TO BITE IRON MAN WITH GAPING JAWS!</span> 🩸`);
+            } else if (dHoriz <= 85.0 && playerY < 65.0) {
+              // Heavy Ranged Missile / Boulder Hurl Attack
+              b.attackCooldown = 2.4 + Math.random() * 1.2;
+              b.smashAnimTimer = 0.55;
+              spawnBossBoulderAttack(b, new THREE.Vector3(playerPos.x, playerY + 0.8, playerPos.z));
+            } else {
+              b.attackCooldown = 0.8;
+            }
+          }
+
+          // Boss Heavy Stomping & Smash Limb Animation (Normal State)
+          b.walkPhase += dt * (Math.max(1.8, b.speed) * 0.85);
+          const bu = b.mesh.userData;
+          if (bu.pelvis) {
+            bu.pelvis.position.y = 0.92 + Math.abs(Math.sin(b.walkPhase)) * 0.08;
+            bu.pelvis.rotation.y = Math.sin(b.walkPhase) * 0.10;
+          }
+          if (bu.leftLeg) {
+            const lSwing = Math.sin(b.walkPhase) * 0.48;
+            bu.leftLeg.rotation.x = lSwing;
+            if (bu.leftShin) bu.leftShin.rotation.x = Math.max(0, -lSwing * 0.85);
+          }
+          if (bu.rightLeg) {
+            const rSwing = -Math.sin(b.walkPhase) * 0.48;
+            bu.rightLeg.rotation.x = rSwing;
+            if (bu.rightShin) bu.rightShin.rotation.x = Math.max(0, -rSwing * 0.85);
+          }
+
+          if (b.smashAnimTimer > 0) {
+            b.smashAnimTimer -= dt;
+            const smashAngle = Math.sin((b.smashAnimTimer / 0.55) * Math.PI) * 1.45;
+            if (bu.leftArm) bu.leftArm.rotation.x = -0.85 - smashAngle;
+            if (bu.rightArm) bu.rightArm.rotation.x = -0.55 - smashAngle;
+            if (bu.torso) bu.torso.rotation.x = 0.26 + Math.sin((b.smashAnimTimer / 0.55) * Math.PI) * 0.25;
+          } else {
+            if (bu.leftArm) bu.leftArm.rotation.x = -0.85 + Math.sin(b.walkPhase) * 0.25;
+            if (bu.rightArm) bu.rightArm.rotation.x = -0.55 - Math.sin(b.walkPhase) * 0.25;
+            if (bu.torso) {
+              bu.torso.rotation.x = 0.26 + Math.cos(b.walkPhase * 2) * 0.05;
+              bu.torso.rotation.z = Math.sin(b.walkPhase) * 0.09;
+            }
+          }
+          if (bu.head) {
+            bu.head.rotation.set(0, 0, 0);
+            bu.head.scale.setScalar(1.45);
+          }
+          if (bu.jaw) {
+            bu.jaw.rotation.x = 0.22 + Math.abs(Math.sin(elapsed * 3.5 + b.id)) * 0.26;
+            bu.jaw.scale.set(1.0, 1.0, 1.0);
+          }
+          if (bu.auraRing) {
+            const pulse = 1.0 + Math.sin(elapsed * 5.0 + b.id) * 0.12;
+            bu.auraRing.scale.setScalar(pulse);
           }
         } else {
-          // Patrol around assigned airport corner sector (homeX, homeZ)
-          b.patrolAngle = (b.patrolAngle || 0) + dt * 0.35;
-          const patrolTargetX = b.homeX + Math.cos(b.patrolAngle) * 18.0;
-          const patrolTargetZ = b.homeZ + Math.sin(b.patrolAngle) * 18.0;
-          const pdx = patrolTargetX - b.pos.x;
-          const pdz = patrolTargetZ - b.pos.z;
-          b.targetHeading = Math.atan2(-pdz, pdx);
-          let bAngDiff = b.targetHeading - b.heading;
-          while (bAngDiff > Math.PI) bAngDiff -= Math.PI * 2;
-          while (bAngDiff < -Math.PI) bAngDiff += Math.PI * 2;
-          b.heading += bAngDiff * dt * 2.5;
+          // --- DEMON KING GROUND-BASED GAPING JAW BITE ATTACK (ZERO JUMPING!) ---
+          const bu = b.mesh.userData;
+          const toPlayerX = playerPos.x - b.pos.x;
+          const toPlayerY = (playerY + 0.8) - (b.pos.y + 3.8);
+          const toPlayerZ = playerPos.z - b.pos.z;
+          const horizDist = Math.hypot(toPlayerX, toPlayerZ) || 0.001;
+          const pitchToPlayer = Math.atan2(toPlayerY, horizDist);
+
+          // Direct face vector towards Iron Man (dead-on orientation, 100% on the ground)
+          b.heading = Math.atan2(toPlayerX, toPlayerZ);
           b.mesh.rotation.y = b.heading;
+          b.pos.y = GROUND_SURFACE_Y; // STRICTLY GROUNDED - NO JUMPING!
 
-          b.speed = THREE.MathUtils.lerp(b.speed, 3.2, dt * 2.5);
-          b.pos.x += Math.cos(b.heading) * b.speed * dt;
-          b.pos.z -= Math.sin(b.heading) * b.speed * dt;
-        }
-        b.pos.y = GROUND_SURFACE_Y;
+          if (b.biteState === 'windup') {
+            b.biteTimer -= dt;
+            const coilT = 1.0 - Math.max(0, b.biteTimer / 0.38);
 
-        // Boss Attack Logic against Iron Man (Melee Colossal Fist Smash & Shockwave / Boulder Hurl)
-        b.attackCooldown -= dt;
-        if (b.attackCooldown <= 0 && !ironManCombatState.isDead) {
-          if (d3D <= 14.5 || (dHoriz <= 13.0 && playerY <= 18.0)) {
-            // Direct Colossal Ground-Slam / Overhead Fist Smash Attack!
-            b.attackCooldown = 1.65 + Math.random() * 0.6;
-            b.smashAnimTimer = 0.55;
-            playBossRoarSound(dHoriz);
-            spawnMassiveExplosion(b.pos.x + Math.cos(b.heading) * 3.5, GROUND_SURFACE_Y + 1.5, b.pos.z - Math.sin(b.heading) * 3.5, 1.15);
-            damageIronManPlayer(b.name, 1);
-          } else if (dHoriz <= 85.0 && playerY < 65.0) {
-            // Hurl a massive concrete tarmac boulder at airborne Iron Man!
-            b.attackCooldown = 2.4 + Math.random() * 1.2;
-            b.smashAnimTimer = 0.55;
-            spawnBossBoulderAttack(b, new THREE.Vector3(playerPos.x, playerY + 0.8, playerPos.z));
-          } else {
-            b.attackCooldown = 0.8;
+            // Menacing reared predator stance on the ground
+            if (bu.pelvis) bu.pelvis.position.y = THREE.MathUtils.lerp(0.92, 0.72, coilT);
+            if (bu.torso) bu.torso.rotation.x = THREE.MathUtils.lerp(0.26, 0.12, coilT);
+            if (bu.head) bu.head.rotation.x = -pitchToPlayer; // locks gaze directly onto Iron Man
+            if (bu.leftArm) bu.leftArm.rotation.x = THREE.MathUtils.lerp(-0.85, -0.25, coilT);
+            if (bu.rightArm) bu.rightArm.rotation.x = THREE.MathUtils.lerp(-0.55, -0.25, coilT);
+
+            // ENORMOUS GAPING JAW UNHINGES WIDE OPEN (over 85 degrees!)
+            if (bu.jaw) {
+              bu.jaw.rotation.x = THREE.MathUtils.lerp(0.25, 1.48, coilT);
+              bu.jaw.scale.set(1.0 + coilT * 0.30, 1.0 + coilT * 0.40, 1.0 + coilT * 0.30);
+            }
+            if (bu.head) bu.head.scale.setScalar(THREE.MathUtils.lerp(1.45, 1.55, coilT));
+
+            if (b.biteTimer <= 0) {
+              b.biteState = 'chomping';
+              b.biteTimer = 0.65;
+              b.hasDealtBiteDamage = false;
+            }
+          } else if (b.biteState === 'chomping') {
+            b.biteTimer -= dt;
+
+            // Rushes forward across the ground toward Iron Man (ground surge, NO JUMPING!)
+            if (horizDist > 4.5) {
+              b.pos.x += Math.sin(b.heading) * 11.5 * dt;
+              b.pos.z += Math.cos(b.heading) * 11.5 * dt;
+            }
+            b.pos.y = GROUND_SURFACE_Y;
+
+            // Aggressive forward lunge posture on foot
+            if (bu.pelvis) bu.pelvis.position.y = 0.92;
+            if (bu.torso) bu.torso.rotation.x = 0.42; // drives torso forward
+            if (bu.head) bu.head.rotation.x = -pitchToPlayer;
+            if (bu.leftArm) bu.leftArm.rotation.x = -1.45;
+            if (bu.rightArm) bu.rightArm.rotation.x = -1.45;
+
+            // Violent Ferocious Chomp Snapping Cycle:
+            const chompPhase = Math.sin((0.65 - b.biteTimer) * 26.0);
+            if (bu.jaw) {
+              bu.jaw.rotation.x = chompPhase > 0 ? 1.48 : 0.02; // Snap between 85 degrees gaping open and clamped shut!
+              bu.jaw.scale.set(1.30, 1.40, 1.30);
+            }
+            // Violent side-to-side head thrashing while biting
+            if (bu.head) {
+              bu.head.rotation.z = Math.sin((0.65 - b.biteTimer) * 30.0) * 0.26;
+            }
+
+            // Deal bite damage & trigger visceral crunch & blood effects
+            if (!b.hasDealtBiteDamage) {
+              const biteDist = Math.hypot(b.pos.x - playerPos.x, (b.pos.y + 4.0) - playerY, b.pos.z - playerPos.z);
+              if (biteDist <= 14.5 && !ironManCombatState.isDead) {
+                b.hasDealtBiteDamage = true;
+                damageIronManPlayer(b.name, 1);
+                playBossBiteChompSound(biteDist);
+                spawnBiteGoreFx(playerPos.x, playerY + 1.0, playerPos.z);
+                carPhysics.shakeIntensity = Math.min(1.0, carPhysics.shakeIntensity + 0.95);
+                updateCollisionHUD(`💀 <span class="text-rose-400 font-black">DEMON KING GAPING JAW BITE!</span> <strong>${b.name}</strong> bit Iron Man with enormous gaping jaws! Health: <strong>${ironManCombatState.hitsRemaining}/100</strong> 🩸`);
+              }
+            }
+
+            if (b.biteTimer <= 0) {
+              b.biteState = 'recovery';
+              b.landTimer = 0.35;
+            }
+          } else if (b.biteState === 'recovery') {
+            b.landTimer -= dt;
+            b.pos.y = GROUND_SURFACE_Y;
+
+            // Smooth recovery back to standard stance
+            const recT = 1.0 - Math.max(0, b.landTimer / 0.35);
+            if (bu.pelvis) bu.pelvis.position.y = THREE.MathUtils.lerp(0.78, 0.92, recT);
+            if (bu.torso) bu.torso.rotation.x = THREE.MathUtils.lerp(0.42, 0.26, recT);
+            if (bu.leftArm) bu.leftArm.rotation.x = THREE.MathUtils.lerp(-1.45, -0.85, recT);
+            if (bu.rightArm) bu.rightArm.rotation.x = THREE.MathUtils.lerp(-1.45, -0.55, recT);
+            if (bu.head) {
+              bu.head.rotation.set(0, 0, 0);
+              bu.head.scale.setScalar(THREE.MathUtils.lerp(1.55, 1.45, recT));
+            }
+            if (bu.jaw) {
+              bu.jaw.rotation.x = THREE.MathUtils.lerp(bu.jaw.rotation.x, 0.22, recT);
+              bu.jaw.scale.set(THREE.MathUtils.lerp(1.3, 1.0, recT), THREE.MathUtils.lerp(1.4, 1.0, recT), THREE.MathUtils.lerp(1.3, 1.0, recT));
+            }
+
+            if (b.landTimer <= 0) {
+              b.biteState = null;
+              b.attackCooldown = 1.8 + Math.random() * 1.2;
+            }
           }
-        }
 
-        // Boss Heavy Stomping & Smash Limb Animation
-        b.walkPhase += dt * (Math.max(1.8, b.speed) * 0.85);
-        const bu = b.mesh.userData;
-        if (bu.pelvis) {
-          bu.pelvis.position.y = 0.92 + Math.abs(Math.sin(b.walkPhase)) * 0.08;
-          bu.pelvis.rotation.y = Math.sin(b.walkPhase) * 0.10;
-        }
-        if (bu.leftLeg) {
-          const lSwing = Math.sin(b.walkPhase) * 0.48;
-          bu.leftLeg.rotation.x = lSwing;
-          if (bu.leftShin) bu.leftShin.rotation.x = Math.max(0, -lSwing * 0.85);
-        }
-        if (bu.rightLeg) {
-          const rSwing = -Math.sin(b.walkPhase) * 0.48;
-          bu.rightLeg.rotation.x = rSwing;
-          if (bu.rightShin) bu.rightShin.rotation.x = Math.max(0, -rSwing * 0.85);
-        }
-
-        if (b.smashAnimTimer > 0) {
-          b.smashAnimTimer -= dt;
-          const smashAngle = Math.sin((b.smashAnimTimer / 0.55) * Math.PI) * 1.45;
-          if (bu.leftArm) bu.leftArm.rotation.x = -0.85 - smashAngle;
-          if (bu.rightArm) bu.rightArm.rotation.x = -0.55 - smashAngle;
-          if (bu.torso) bu.torso.rotation.x = 0.26 + Math.sin((b.smashAnimTimer / 0.55) * Math.PI) * 0.25;
-        } else {
-          if (bu.leftArm) bu.leftArm.rotation.x = -0.85 + Math.sin(b.walkPhase) * 0.25;
-          if (bu.rightArm) bu.rightArm.rotation.x = -0.55 - Math.sin(b.walkPhase) * 0.25;
-          if (bu.torso) {
-            bu.torso.rotation.x = 0.26 + Math.cos(b.walkPhase * 2) * 0.05;
-            bu.torso.rotation.z = Math.sin(b.walkPhase) * 0.09;
+          if (bu.auraRing) {
+            const pulse = 1.35 + Math.sin(elapsed * 8.0 + b.id) * 0.20;
+            bu.auraRing.scale.setScalar(pulse);
           }
-        }
-        if (bu.jaw) {
-          bu.jaw.rotation.x = 0.22 + Math.abs(Math.sin(elapsed * 3.5 + b.id)) * 0.26;
-        }
-        if (bu.auraRing) {
-          const pulse = 1.0 + Math.sin(elapsed * 5.0 + b.id) * 0.12;
-          bu.auraRing.scale.setScalar(pulse);
         }
       }
 
