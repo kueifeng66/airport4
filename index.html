@@ -5011,7 +5011,8 @@
       const now = new Date();
       const hour = now.getHours() + now.getMinutes() / 60;
       // Daytime: 06:00 to 18:00 (6 AM to 6 PM), Night outside those hours
-      return (hour >= 6.0 && hour < 18.0) ? 'day' : 'night';
+      // return (hour >= 6.0 && hour < 18.0) ? 'day' : 'night';
+      return (hour >= 6.0 && hour < 18.0) ? 'day' : 'day';
     }
 
     function syncAutoLighting() {
